@@ -1,3 +1,11 @@
+# --- Regras Específicas do Projeto ---
+# Ignora a pasta de dados inteira para não versionar dados brutos ou processados.
+# O repositório deve conter apenas o CÓDIGO que gera os dados.
+/data/
+
+
+# --- Template Padrão Python (Seu arquivo original) ---
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

@@ -1,0 +1,7 @@
+notebook
+jupyterlab
+ipykernel
+pandas
+matplotlib
+pyarrow
+fastparquet
