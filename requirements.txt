@@ -3,5 +3,6 @@ jupyterlab
 ipykernel
 pandas
 matplotlib
+seaborn
 pyarrow
 fastparquet
