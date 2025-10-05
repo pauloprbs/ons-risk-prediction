@@ -116,8 +116,9 @@ Certifique-se de que os dados brutos necessários estão na pasta /data
 
 Abra o Jupyter Lab:
 
+```
 jupyter lab
-
+```
 
 Comece a trabalhar no 04-EDA-Rede.ipynb
 
