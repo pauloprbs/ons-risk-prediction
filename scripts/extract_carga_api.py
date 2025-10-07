@@ -1,9 +1,17 @@
+import os
+import sys
 import requests
+import json
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import os
-import json
+
+# --- INÍCIO DA MODIFICAÇÃO PARA USAR CONFIG.PY ---
+# Adiciona a pasta raiz do projeto ao path do Python.
+# Isso permite que o script encontre e importe o arquivo config.py.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import START_YEAR, START_MONTH, END_YEAR, END_MONTH
+# ---------------------------------------------------
 
 BASE_URL = "https://apicarga.ons.org.br/prd" 
 
@@ -11,8 +19,11 @@ ENDPOINT_VERIFICADA = "/cargaverificada"
 ENDPOINT_PROGRAMADA = "/cargaprogramada"
 CODIGO_AREA = "GO"
 
-DATA_INICIO_TOTAL = datetime(2024, 1, 1)
-DATA_FIM_TOTAL = datetime(2024, 12, 31)
+# --- AS DATAS AGORA SÃO LIDAS DO ARQUIVO DE CONFIGURAÇÃO ---
+DATA_INICIO_TOTAL = datetime(START_YEAR, START_MONTH, 1)
+# Define o fim como o último dia do mês final configurado
+DATA_FIM_TOTAL = datetime(END_YEAR, END_MONTH, 1) + relativedelta(months=1, days=-1)
+# ----------------------------------------------------------
 
 def fetch_ons_data(endpoint, data_inicio, data_fim, cod_areacarga):
     """
@@ -36,7 +47,8 @@ def fetch_ons_data(endpoint, data_inicio, data_fim, cod_areacarga):
             print(f"  -> Resposta: {response.text}")
             return None
 
-        if not response.json():
+        # A API pode retornar uma string '[]' em vez de um JSON vazio
+        if not response.text or response.text == '[]':
              print("  -> AVISO: A API retornou uma lista vazia para este período.")
              return [] 
 
@@ -45,6 +57,9 @@ def fetch_ons_data(endpoint, data_inicio, data_fim, cod_areacarga):
     except requests.exceptions.RequestException as e:
         print(f"  -> ERRO de Conexão: {e}")
         return None
+    except json.JSONDecodeError:
+        print(f"  -> AVISO: A resposta da API não foi um JSON válido. Resposta: {response.text}")
+        return []
 
 def main():
     """
@@ -76,10 +91,8 @@ def main():
     df_verificada = pd.json_normalize(all_data_verificada)
     df_programada = pd.json_normalize(all_data_programada)
     
-    # --- CORREÇÃO APLICADA AQUI ---
-    # Removemos o '../' para que o caminho seja relativo à pasta raiz do projeto.
+    # O caminho já estava correto
     output_dir = 'data/raw/'
-    # -----------------------------
     os.makedirs(output_dir, exist_ok=True)
     
     path_verificada = os.path.join(output_dir, 'carga_verificada_go.parquet')

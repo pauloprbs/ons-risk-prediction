@@ -7,3 +7,6 @@ seaborn
 pyarrow
 fastparquet
 scikit-learn
+tqdm
+imbalanced-learn
+xgboost
