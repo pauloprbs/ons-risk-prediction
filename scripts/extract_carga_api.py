@@ -12,8 +12,8 @@ ENDPOINT_VERIFICADA = "/cargaverificada"
 ENDPOINT_PROGRAMADA = "/cargaprogramada"
 CODIGO_AREA = "GO"
 
-DATA_INICIO_TOTAL = datetime(2023, 1, 1)
-DATA_FIM_TOTAL = datetime(2023, 12, 31)
+DATA_INICIO_TOTAL = datetime(2025, 1, 1)
+DATA_FIM_TOTAL = datetime(2025, 10, 6) 
 
 def fetch_ons_data(endpoint, data_inicio, data_fim, cod_areacarga):
     """
