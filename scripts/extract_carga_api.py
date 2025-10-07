@@ -5,15 +5,14 @@ from dateutil.relativedelta import relativedelta
 import os
 import json
 
-
 BASE_URL = "https://apicarga.ons.org.br/prd" 
 
 ENDPOINT_VERIFICADA = "/cargaverificada"
 ENDPOINT_PROGRAMADA = "/cargaprogramada"
 CODIGO_AREA = "GO"
 
-DATA_INICIO_TOTAL = datetime(2025, 1, 1)
-DATA_FIM_TOTAL = datetime(2025, 10, 6) 
+DATA_INICIO_TOTAL = datetime(2024, 1, 1)
+DATA_FIM_TOTAL = datetime(2024, 12, 31)
 
 def fetch_ons_data(endpoint, data_inicio, data_fim, cod_areacarga):
     """
@@ -77,7 +76,10 @@ def main():
     df_verificada = pd.json_normalize(all_data_verificada)
     df_programada = pd.json_normalize(all_data_programada)
     
-    output_dir = '../data'
+    # --- CORREÇÃO APLICADA AQUI ---
+    # Removemos o '../' para que o caminho seja relativo à pasta raiz do projeto.
+    output_dir = 'data/raw/'
+    # -----------------------------
     os.makedirs(output_dir, exist_ok=True)
     
     path_verificada = os.path.join(output_dir, 'carga_verificada_go.parquet')
