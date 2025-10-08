@@ -29,7 +29,6 @@ source venv/bin/activate   # Mac/Linux
 
 # Instale as dependências
 pip install -r requirements.txt
-pip install xgboost imbalanced-learn tqdm
 ```
 
 ## 2. Definição do Período de Análise

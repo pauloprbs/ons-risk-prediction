@@ -8,12 +8,13 @@ from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from config import START_YEAR, START_MONTH, END_YEAR, END_MONTH
 
-# 2. Defina a pasta de destino para os dados brutos
+# Defina a pasta de destino para os dados brutos
 DESTINATION_FOLDER = 'data/raw/'
 
-# 3. Configuração dos datasets com base nos links que você forneceu
+# Configuração dos datasets com base nos links que você forneceu
 BASE_URL = "https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/"
 DATASETS = [
+    # Datasets Originais
     {
         "name": "Geracao por Usina",
         "folder": "geracao_usina_2_ho",
@@ -56,8 +57,27 @@ DATASETS = [
         "file_prefix": "INTERCAMBIO_NACIONAL",
         "frequency": "annual"
     },
+    # --- NOVOS DATASETS ADICIONADOS AQUI ---
+    {
+        "name": "CMO Semanal",
+        "folder": "cmo_se",
+        "file_prefix": "CMO_SEMANAL",
+        "frequency": "annual" # O arquivo é um por ano
+    },
+    {
+        "name": "Disponibilidade Usina",
+        "folder": "disponibilidade_usina_ho",
+        "file_prefix": "DISPONIBILIDADE_USINA",
+        "frequency": "monthly"
+    },
+    {
+        "name": "Indicador CCAL",
+        "folder": "ind_confiarb_ccal",
+        "file_prefix": "IND_CONFIARB_CCAL",
+        "frequency": "static" # Nova frequência para arquivos únicos
+    },
+    # ----------------------------------------
 ]
-# --- FIM DAS CONFIGURAÇÕES ---
 
 
 def download_file(url, save_path):
@@ -70,11 +90,11 @@ def download_file(url, save_path):
         return
 
     try:
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=30) # Adicionado timeout
         
         if response.status_code == 200:
             total_size = int(response.headers.get('content-length', 0))
-            block_size = 1024  # 1 Kilobyte
+            block_size = 1024
             
             with open(save_path, 'wb') as f, tqdm(
                 desc=os.path.basename(save_path),
@@ -100,25 +120,37 @@ def main():
     """
     Função principal que orquestra a geração de URLs e o download.
     """
-    # Garante que a pasta de destino exista
     os.makedirs(DESTINATION_FOLDER, exist_ok=True)
     
-    # Gera o intervalo de datas mês a mês
+    # --- NOVO BLOCO: Baixar arquivos estáticos primeiro ---
+    print("--- Verificando arquivos estáticos (download único) ---")
+    for dataset in DATASETS:
+        if dataset.get("frequency") == "static":
+            folder = dataset["folder"]
+            filename = f"{dataset['file_prefix']}.csv"
+            url = f"{BASE_URL}{folder}/{filename}"
+            save_path = os.path.join(DESTINATION_FOLDER, filename)
+            download_file(url, save_path)
+    # ----------------------------------------------------
+
     date_range = pd.date_range(
         start=f"{START_YEAR}-{START_MONTH}-01",
         end=f"{END_YEAR}-{END_MONTH}-01",
-        freq='MS' # MS = Month Start
+        freq='MS'
     )
-
-    downloaded_annuals = set() # Para evitar downloads repetidos de arquivos anuais
+    downloaded_annuals = set()
 
     for date in date_range:
         year = date.year
-        month = f"{date.month:02d}" # Formata o mês com zero à esquerda (ex: 09)
+        month = f"{date.month:02d}"
 
         print(f"\n--- Verificando arquivos para {year}-{month} ---")
 
         for dataset in DATASETS:
+            # Pula os estáticos que já foram baixados
+            if dataset.get("frequency") == "static":
+                continue
+            
             folder = dataset["folder"]
             prefix = dataset["file_prefix"]
             
@@ -129,15 +161,13 @@ def main():
                 download_file(url, save_path)
             
             elif dataset["frequency"] == "annual":
-                # Lógica para baixar arquivos anuais apenas uma vez
                 if year not in downloaded_annuals:
                     filename = f"{prefix}_{year}.csv"
                     url = f"{BASE_URL}{folder}/{filename}"
                     save_path = os.path.join(DESTINATION_FOLDER, filename)
                     download_file(url, save_path)
-    
-    # Adiciona o ano à lista de já baixados
-    downloaded_annuals.add(year)
+        
+        downloaded_annuals.add(year)
 
 if __name__ == "__main__":
     main()
