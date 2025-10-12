@@ -71,11 +71,11 @@ Execute os notebooks Jupyter em sequência, do 01 ao final. Cada notebook realiz
 
 6. ```06-Feature-Engineering-Avancada.ipynb```
 
-7. ```09-Features-Adicionais.ipynb (Nome antigo: 07-Features-Economicas)```
+7. ```07-Features-Adicionais.ipynb```
 
-8. ```10-Modelagem-v2.ipynb (ou o notebook final de otimização)```
+8. ```08-Features-Meteorologicas.ipynb```
 
-9. ```11-Modelagem-RandomForest.ipynb (para comparar com um segundo modelo)```
+9. ```09-Modelagem-Thresholding.ipynb```
 
 ---
 

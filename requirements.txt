@@ -10,3 +10,5 @@ scikit-learn
 tqdm
 imbalanced-learn
 xgboost
+requests
+lightgbm
