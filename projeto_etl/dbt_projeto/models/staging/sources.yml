@@ -1,0 +1,13 @@
+# local: models/staging/sources.yml
+version: 2
+
+sources:
+  - name: BR_ENERGY_DATA
+    database: "{{ var('raw_database', 'RAW_DATA') }}"
+    schema: "{{ var('raw_schema', 'BR_ENERGY_DATA') }}"
+    tables:
+      - name: GERACAO_USINA
+      - name: FATOR_CAPACIDADE
+      - name: EAR_DIARIO_SUBSISTEMA
+      - name: INTERRUPCAO_CARGA
+      - name: STG_EAR_DIARIO
