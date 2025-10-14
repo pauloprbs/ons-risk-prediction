@@ -1,10 +1,10 @@
-<h2>Fontes de dados - exemplos:</h2>
-<h3>Base de dados: Interrupção de Carga</h3>
+# Fontes de dados - exemplos:
+## Base de dados: Interrupção de Carga
 ```
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/interrupcao_carga/INTERRUPCAO_CARGA.csv
 ```
 
-<h3>geração por usina</h3>
+## geração por usina
 ```
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/geracao_usina_2_ho/GERACAO_USINA-2_2024_12.csv
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/geracao_usina_2_ho/GERACAO_USINA-2_2024_11.csv
@@ -20,13 +20,12 @@ https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/geracao_usina_2_ho/GERACA
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/geracao_usina_2_ho/GERACAO_USINA-2_2024_01.csv
 ```
 
-<h3> EAR Diário por Subsistema </h3>
+## EAR Diário por Subsistema 
 ```
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/ear_subsistema_di/EAR_DIARIO_SUBSISTEMA_2024.csv
 ``` 
 
-
-<h3>Fator de capacidade</h3>
+## Fator de capacidade</h3>
 ```
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/fator_capacidade_2_di/FATOR_CAPACIDADE-2_2024_12.csv
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/fator_capacidade_2_di/FATOR_CAPACIDADE-2_2024_11.csv
@@ -42,7 +41,7 @@ https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/fator_capacidade_2_di/FAT
 https://ons-aws-prod-opendata.s3.amazonaws.com/dataset/fator_capacidade_2_di/FATOR_CAPACIDADE-2_2024_01.csv
 ```
 
-<h2>Estrutura da pasta:</h2>
+## Estrutura da pasta:
 ```
 projeto_etl/
 ├── docker-compose.yml
@@ -73,7 +72,7 @@ projeto_etl/
 
 ```
 
-<h2>docker-compose.yml</2>
+## docker-compose.yml
 ```
 #yaml name=docker-compose.yml
 version: '3.7'
@@ -149,23 +148,32 @@ services:
     command: bash -c "airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@admin.com"
 ```
 
-<h2>airflow/Dockerfile</h2>
+## airflow/Dockerfile
 ```
+# airflow/Dockerfile
 FROM apache/airflow:2.8.1
+
 
 USER root
 RUN apt-get update && apt-get install -y git
 
 USER airflow
-RUN pip install dbt-snowflake
+# Adicionamos o provider do Google
+RUN pip install gcsfs dbt-snowflake apache-airflow apache-airflow-providers-snowflake apache-airflow-providers-google
+
 ```
 
-<h2>airflow/requirements.txt</h2>
+## airflow/requirements.txt
 ```
 dbt-snowflake
+pandas
+snowflake-connector-python
+apache-airflow-providers-google
+apache-airflow-providers-snowflake
+
 ```
 
-<h2>airflow/dags/dbt_etl_dag.py</h2>
+## airflow/dags/dbt_etl_dag.py
 ```
 from airflow import DAG
 from airflow.operators.bash import BashOperator
@@ -200,8 +208,74 @@ with DAG(
     dbt_run >> dbt_test
 ```
 
+## airflow/dags/dbt_etl_dag.py
+```
+# -*- coding: utf-8 -*-
+# airflow/dags/export_fact_to_gcs_alternativa.py
 
-<h2>snowflake_setup/setup.sql</h2>
+import pendulum
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+from airflow.providers.google.cloud.transfers.local_to_gcs import LocalFilesystemToGCSOperator
+
+import pandas as pd
+import snowflake.connector
+
+# ConfiguraÃ§Ãµes
+DBT_PROJECT_DIR = "/dbt_projeto"
+GCS_BUCKET_NAME = "projeto-etl-m2-fatos"
+LOCAL_CSV_PATH = "/tmp/fct_geracao_energia.csv"
+SNOWFLAKE_QUERY = "SELECT * FROM RAW_DATA.BR_ENERGY_DATA.V_FCT_GERACAO_ENERGIA"
+
+# FunÃ§Ã£o Python para exportar dados do Snowflake para CSV local
+def export_snowflake_to_csv():
+    conn = snowflake.connector.connect(
+        user="ETL_USER",
+        password="NovaSenha@123.456",
+        account="hcummsm-jv25472",  
+        warehouse="ETL_WH",
+        database="RAW_DATA",
+        schema="BR_ENERGY_DATA",
+        role="ETL_ROLE"
+    )
+    df = pd.read_sql(SNOWFLAKE_QUERY, conn)
+    df.to_csv(LOCAL_CSV_PATH, index=False)
+    conn.close()
+
+with DAG(
+    dag_id="export_fact_to_gcs_alternativa",
+    start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
+    schedule="@daily",
+    catchup=False,
+    tags=["dbt", "export", "gcs", "snowflake"],
+) as dag:
+
+    dbt_build = BashOperator(
+        task_id="dbt_build",
+        bash_command=f"cd {DBT_PROJECT_DIR} && dbt build",
+    )
+
+    extract_to_csv = PythonOperator(
+        task_id="extract_snowflake_to_csv",
+        python_callable=export_snowflake_to_csv,
+    )
+
+    upload_to_gcs = LocalFilesystemToGCSOperator(
+        task_id="upload_csv_to_gcs",
+        src=LOCAL_CSV_PATH,
+        dst="facts/fct_geracao_energia_{{ ds_nodash }}.csv",
+        bucket=GCS_BUCKET_NAME,
+        mime_type="text/csv",
+    )
+
+    dbt_build >> extract_to_csv >> upload_to_gcs
+
+```
+
+
+## snowflake_setup/setup.sql
+
 ```
 -- projeto_etl/snowflake_setup/setup.sql: 
 -- Ativar role administrativa
@@ -346,9 +420,7 @@ MODIFY COLUMN cod_modalidadeoperacao VARCHAR(60);
 
 ```
 
-
-
-<h2>dbt_projeto/dbt_project.yml</h2>
+## dbt_projeto/dbt_project.yml
 ```
 # projeto_etl/dbt_projeto/dbt_project.yml
 name: 'dbt_projeto'
@@ -385,7 +457,7 @@ models:
 
 ```
 
-<h2>models/sources.yml</h2>
+## models/sources.ym
 ```
 # projeto_etl/dbt_projeto/models/staging/sources.yml
 version: 2
@@ -402,14 +474,14 @@ sources:
       - name: STG_EAR_DIARIO
 ```
 
-<h2>dbt_projeto/packages.yml</h2>
+## dbt_projeto/packages.yml
 ```
 packages:
   - package: dbt-labs/dbt_utils
     version: 1.1.1
 ```
 
-<h2>dbt_projeto/models/staging/stg_ear_diario.sql</h2>
+## dbt_projeto/models/staging/stg_ear_diario.sql
 ```
 -- projeto_etl/dbt_projeto/models/staging/stg_ear_diario.sql
 
@@ -425,7 +497,7 @@ select
 from {{ source('BR_ENERGY_DATA', 'EAR_DIARIO_SUBSISTEMA') }}
 ```
 
-<h2>dbt_projeto/models/staging/stg_fator_capacidade.sql</h2>
+## dbt_projeto/models/staging/stg_fator_capacidade.sql
 ```
  
 select
@@ -442,8 +514,7 @@ select
 from {{ source('BR_ENERGY_DATA', 'FATOR_CAPACIDADE') }}
 ```
 
-
-<h2>dbt_projeto/models/staging/stg_geracao_usina.sql</h2>
+## dbt_projeto/models/staging/stg_geracao_usina.sql
 ```
 select
     "DIN_INSTANTE"::timestamp as instante_geracao,
@@ -459,7 +530,7 @@ from {{ source('BR_ENERGY_DATA', 'GERACAO_USINA') }}
 
 ```
 
-<h2>dbt_projeto/models/staging/stg_interrupcao_carga.sql</h2>
+## dbt_projeto/models/staging/stg_interrupcao_carga.sql
 ```
 -- local:  models/staging/stg_interrupcao_carga.sql
 
@@ -481,7 +552,7 @@ select
 from {{ source('BR_ENERGY_DATA', 'INTERRUPCAO_CARGA') }}
 ```
 
-<h2>dbt_projeto/models/marts/dimensions/dim_localizacao.sql</h2>
+## dbt_projeto/models/marts/dimensions/dim_localizacao.sql
 ```
 with all_locations as (
     select distinct
@@ -501,7 +572,7 @@ select
 from all_locations
 ```
 
-<h2>dbt_projeto/models/marts/dimensions/dim_tempo.sql</h2>
+## dbt_projeto/models/marts/dimensions/dim_tempo.sql
 ```
 with all_dates as (
     select distinct date_trunc('hour', instante_geracao) as horario from {{ ref('stg_geracao_usina') }}
@@ -520,7 +591,7 @@ from all_dates
 
 ```
 
-<h2>dbt_projeto/models/marts/dimensions/dim_usina.sql</h2>
+## dbt_projeto/models/marts/dimensions/dim_usina.sql
 
 ```
 with all_usinas as (
@@ -550,7 +621,7 @@ select
 from all_usinas
 
 ```
-<h2>dbt_projeto/models/marts/facts/fct_geracao_energia.sql</h2>
+## dbt_projeto/models/marts/facts/fct_geracao_energia.sql
 ```
 with geracao as (
     select
