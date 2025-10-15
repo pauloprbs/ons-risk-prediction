@@ -15,3 +15,4 @@ lightgbm
 catboost
 tensorflow[and-cuda]==2.17.0
 keras-tuner
+imblearn
