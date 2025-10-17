@@ -3,7 +3,8 @@
 # O repositório deve conter apenas o CÓDIGO que gera os dados.
 /data/raw/
 /notebooks/catboost_info/
-/notebooks/keras_tuner_dir
+/notebooks/keras_tuner_dir/
+/logs/
 
 
 # --- Template Padrão Python (Seu arquivo original) ---
