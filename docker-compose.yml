@@ -1,6 +1,8 @@
+version: '3.8'
+
 services:
   # -------------------
-  # Airflow
+  # Airflow Services
   # -------------------
   airflow-db:
     image: postgres:13
@@ -32,15 +34,18 @@ services:
       - _AIRFLOW_WWW_USER_USERNAME=${AIRFLOW_USER:-admin}
       - _AIRFLOW_WWW_USER_PASSWORD=${AIRFLOW_PASSWORD:-admin}
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ./airflow_ons/dags:/opt/airflow/dags
+      - ./airflow_ons/logs:/opt/airflow/logs
+      - ./airflow_ons/plugins:/opt/airflow/plugins
+      - ./dbt_ons:/opt/airflow/dbt_ons
     entrypoint: /bin/bash
     command:
       - -c
       - |
         mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
         chown -R 50000:0 /opt/airflow
+        # Instala as dependências do dbt dentro do container do Airflow
+        pip install dbt-snowflake
         exec /entrypoint airflow version
     depends_on:
       airflow-db:
@@ -60,9 +65,10 @@ services:
       - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW__WEBSERVER__SECRET_KEY:-changeme}
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ./airflow_ons/dags:/opt/airflow/dags
+      - ./airflow_ons/logs:/opt/airflow/logs
+      - ./airflow_ons/plugins:/opt/airflow/plugins
+      - ./dbt_ons:/opt/airflow/dbt_ons
     depends_on:
       - airflow-init
     restart: always
@@ -83,9 +89,10 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow-db:5432/${AIRFLOW_DB_NAME:-airflow}
       - AIRFLOW__CORE__LOAD_EXAMPLES=false
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
+      - ./airflow_ons/dags:/opt/airflow/dags
+      - ./airflow_ons/logs:/opt/airflow/logs
+      - ./airflow_ons/plugins:/opt/airflow/plugins
+      - ./dbt_ons:/opt/airflow/dbt_ons
     depends_on:
       - airflow-init
     restart: always
@@ -95,24 +102,20 @@ services:
       timeout: 10s
       retries: 5
 
-  # -------------------
-  # dbt (Snowflake)
-  # -------------------
+  # ----------------------------------------------------
+  # dbt (Snowflake) - Serviço para Desenvolvimento Local
+  # ----------------------------------------------------
+  # Este serviço é para você executar comandos dbt manualmente no seu terminal, se precisar.
+  # A orquestração automática será feita pelo Airflow.
   dbt:
     image: ghcr.io/dbt-labs/dbt-snowflake:latest
-    container_name: dbt
+    container_name: dbt_ons_service
     volumes:
-      - ./dbt:/usr/app
+      - ./dbt_ons:/usr/app
+      - ~/.dbt/profiles.yml:/root/.dbt/profiles.yml
     working_dir: /usr/app
-    environment:
-      - SNOWFLAKE_ACCOUNT=${SNOWFLAKE_ACCOUNT}
-      - SNOWFLAKE_USER=${SNOWFLAKE_USER}
-      - SNOWFLAKE_PASSWORD=${SNOWFLAKE_PASSWORD}
-      - SNOWFLAKE_ROLE=${SNOWFLAKE_ROLE}
-      - SNOWFLAKE_WAREHOUSE=${SNOWFLAKE_WAREHOUSE}
-      - SNOWFLAKE_DATABASE=${SNOWFLAKE_DATABASE}
-      - SNOWFLAKE_SCHEMA=${SNOWFLAKE_SCHEMA}
-    entrypoint: ["/bin/sh", "-c", "while true; do sleep 30; done"]
+    # Removemos as variáveis de ambiente do Snowflake, pois o dbt usará o profiles.yml
+    entrypoint: ["/bin/sh", "-c", "echo 'dbt container ready. Run commands like: docker-compose exec dbt_ons_service dbt run' && while true; do sleep 30; done"]
 
 volumes:
   airflow-db-data:
