@@ -1,0 +1,8 @@
+-- Limpa e filtra os dados de Energia Afluente (ENA)
+
+SELECT
+    TO_DATE(ena_data) AS dia,
+    nom_subsistema AS subsistema,
+    TRY_CAST(REPLACE(ena_bruta_regiao_percentualmlt, ',', '.') AS FLOAT) AS ena_percentual_mlt_seco
+FROM {{ source('ons_data_raw', 'ENA_DIARIO_RAW') }}
+WHERE subsistema = 'SUDESTE' -- Conforme lógica do notebook 05

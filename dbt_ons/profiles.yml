@@ -1,0 +1,21 @@
+# dbt_ons/profiles.yml
+
+ons_risk_prediction:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      # O dbt lerá a variável de ambiente SNOWFLAKE_ACCOUNT
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}" 
+
+      # O dbt lerá as credenciais das variáveis de ambiente
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+
+      # O dbt lerá as configurações de banco de dados e warehouse das variáveis de ambiente
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA') }}" # Este é o schema padrão onde o dbt irá criar as tabelas
+      threads: 4
+      client_session_keep_alive: False

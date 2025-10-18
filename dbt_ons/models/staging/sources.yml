@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: ons_data_raw
+    database: RAW_DB
+    schema: ONS_DATA
+    tables:
+      - name: INTERRUPCAO_CARGA_RAW
+      - name: CARGA_PROGRAMADA_RAW
+      - name: CARGA_VERIFICADA_RAW
+      - name: GERACAO_USINA_RAW
+      - name: RESTRICAO_EOLICA_RAW
+      - name: RESTRICAO_FOTOVOLTAICA_RAW
+      - name: INTERCAMBIO_NACIONAL_RAW
+      - name: EAR_DIARIO_RAW
+      - name: ENA_DIARIO_RAW
+      - name: CMO_SEMANAL_RAW
+      - name: DISPONIBILIDADE_USINA_RAW
+      - name: CLIMA_GO_DIARIO_RAW

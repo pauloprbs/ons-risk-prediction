@@ -1,0 +1,24 @@
+# dbt_ons/dbt_project.yml
+
+name: 'ons_risk_prediction'
+version: '1.0.0'
+profile: 'ons_risk_prediction' # Nome do perfil no seu profiles.yml
+
+# Define onde os modelos serão criados
+models:
+  ons_risk_prediction:
+    staging:
+      # Modelos de staging serão views no STAGING_DB
+      materialized: view
+      database: STAGING_DB
+      schema: STG_ONS
+    intermediate:
+      # Modelos intermediários também serão views
+      materialized: view
+      database: STAGING_DB
+      schema: STG_ONS
+    core:
+      # O modelo final será uma tabela física no CORE_DB
+      materialized: table
+      database: CORE_DB
+      schema: ML_FEATURES
