@@ -2,23 +2,31 @@
 
 name: 'ons_risk_prediction'
 version: '1.0.0'
-profile: 'ons_risk_prediction' # Nome do perfil no seu profiles.yml
+profile: 'ons_risk_prediction'
 
-# Define onde os modelos serão criados
+# Define onde o dbt deve procurar os modelos.
+model-paths: ["models"]
+
+# Define variáveis globais para o projeto
+vars:
+  start_year: 2010
+  end_year: 2025
+
+# Define como os modelos encontrados nessas pastas devem ser materializados.
 models:
   ons_risk_prediction:
     staging:
-      # Modelos de staging serão views no STAGING_DB
-      materialized: view
-      database: STAGING_DB
-      schema: STG_ONS
+      # CORREÇÃO: O '+' força o dbt a usar este nome de forma absoluta.
+      +materialized: view
+      +database: STAGING_DB
+      +schema: STG_ONS
     intermediate:
-      # Modelos intermediários também serão views
-      materialized: view
-      database: STAGING_DB
-      schema: STG_ONS
+      # CORREÇÃO: O '+' força o dbt a usar este nome de forma absoluta.
+      +materialized: view
+      +database: STAGING_DB
+      +schema: STG_ONS
     core:
       # O modelo final será uma tabela física no CORE_DB
-      materialized: table
-      database: CORE_DB
-      schema: ML_FEATURES
+      +materialized: table
+      +database: CORE_DB
+      +schema: ML_FEATURES
