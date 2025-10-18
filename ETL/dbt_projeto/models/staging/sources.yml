@@ -1,0 +1,94 @@
+# projeto_etl/dbt_projeto/models/staging/sources.yml
+version: 2
+
+sources:
+  - name: BR_ENERGY_DATA
+    database: "{{ var('raw_database', 'RAW_DATA') }}"
+    schema: "{{ var('raw_schema', 'BR_ENERGY_DATA') }}"
+    tables:
+      # Fontes existentes
+      - name: GERACAO_USINA
+      - name: FATOR_CAPACIDADE
+      - name: EAR_DIARIO_SUBSISTEMA
+      - name: INTERRUPCAO_CARGA
+
+      # --- NOVAS FONTES ---
+      - name: RESTRICAO_EOLICA
+        description: "Informações de restrições de operação por constrained-off em usinas eólicas."
+        columns:
+          - name: din_instante
+            description: "Data e hora da medição."
+          - name: id_subsistema
+            description: "Identificador do Subsistema."
+          - name: id_estado
+            description: "Sigla do Estado."
+          - name: id_ons
+            description: "Identificador da Usina ou Conjunto no ONS."
+          - name: ceg
+            description: "Código Único do Empreendimento de Geração (ANEEL)."
+          - name: nom_usina
+            description: "Nome da Usina."
+          - name: val_geracaoestimada
+            description: "Geração estimada da usina, em MWmed."
+          - name: val_geracaoverificada
+            description: "Geração verificada da usina, em MWmed."
+
+      - name: ENA_DIARIO_SUBSISTEMA
+        description: "Dados de Energia Natural Afluente (ENA) em periodicidade diária por Subsistema."
+        columns:
+          - name: ena_data
+            description: "Dia observado da medida."
+          - name: id_subsistema
+            description: "Código do Subsistema."
+          - name: nom_subsistema
+            description: "Nome do Subsistema."
+          - name: ena_bruta_regiao_mwmed
+            description: "Valor de ENA bruta por Subsistema em MWmês."
+          - name: ena_armazenavel_regiao_mwmed
+            description: "Valor de ENA armazenável por Subsistema em MWmês."
+
+      - name: INTERCAMBIO_SUBSISTEMA
+        description: "Dados de intercâmbio de energia entre subsistemas em base horária."
+        columns:
+          - name: din_instante
+            description: "Data/hora de início do período."
+          - name: id_subsistema_origem
+            description: "Código do Subsistema de Origem."
+          - name: id_subsistema_destino
+            description: "Código do Subsistema de Destino."
+          - name: val_intercambiomwmed
+            description: "Intercâmbio verificado em MWmed."
+
+      - name: CMO_SEMANAL
+        description: "Custo Marginal de Operação (CMO) por semana operativa e subsistema."
+        columns:
+          - name: din_instante
+            description: "Data de referência da Semana Operativa."
+          - name: id_subsistema
+            description: "Código do Subsistema."
+          - name: val_cmomediasemanal
+            description: "CMO Médio Semanal, em R$/MWh."
+          - name: val_cmoleve
+            description: "CMO no patamar de carga leve, em R$/MWh."
+          - name: val_cmomedia
+            description: "CMO no patamar de carga média, em R$/MWh."
+          - name: val_cmopesada
+            description: "CMO no patamar de carga pesada, em R$/MWh."
+
+      - name: IND_CONFIABILIDADE_CCAL
+        description: "Indicador de Controle de Carregamento de Linhas de Transmissão (CCAL)."
+        columns:
+          - name: din_referencia
+            description: "Mês de referência do indicador."
+          - name: cod_tipoagregacao
+            description: "Tipo de agregação (SIN, COSR ou Agente)."
+          - name: id_periodicidade
+            description: "Periodicidade do indicador (AN: Anual, ME: Mensal)."
+          - name: nom_agregacao
+            description: "Nome da visão para a agregação."
+          - name: num_linhasoperacao
+            description: "Número de linhas de transmissão em operação."
+          - name: num_linhasvioladas
+            description: "Número de linhas de transmissão com sobrecarga."
+          - name: val_ccal
+            description: "Valor do indicador CCAL, em %."

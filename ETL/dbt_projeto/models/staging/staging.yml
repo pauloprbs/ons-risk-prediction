@@ -1,0 +1,110 @@
+# projeto_etl/dbt_projeto/models/staging/staging.yml
+version: 2
+
+models:
+  - name: stg_ear_diario_subsistema
+    description: "Modelo de staging para os dados de Energia Armazenada (EAR) diária."
+    columns:
+      - name: id_subsistema
+        tests:
+          - not_null
+      - name: data_medicao
+        tests:
+          - not_null
+
+  - name: stg_fator_capacidade
+    description: "Modelo de staging para os dados de fator de capacidade das usinas."
+    columns:
+      - name: id_ons
+        tests:
+          - not_null
+      - name: instante_medicao
+        tests:
+          - not_null
+
+  - name: stg_geracao_usina
+    description: "Modelo de staging para os dados de geração de energia por usina."
+    columns:
+      - name: id_ons
+        tests:
+          - not_null
+      - name: instante_geracao
+        tests:
+          - not_null
+
+  - name: stg_interrupcao_carga
+    description: "Modelo de staging para os dados de interrupção de carga."
+    columns:
+      - name: id_perturbacao
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_restricao_eolica
+    description: "Prepara os dados de restrição de operação de usinas eólicas."
+    columns:
+      - name: instante_medicao
+        description: "Chave temporal da medição."
+        tests:
+          - not_null
+      - name: id_ons
+        description: "Identificador da usina no ONS."
+        tests:
+          - not_null
+      - name: ceg
+        description: "Código único do empreendimento (CEG)."
+        tests:
+          - not_null
+
+  - name: stg_ena_diario_subsistema
+    description: "Prepara os dados diários de Energia Natural Afluente por subsistema."
+    columns:
+      - name: data_medicao
+        description: "Chave de data da medição."
+        tests:
+          - not_null
+      - name: id_subsistema
+        description: "Chave do subsistema."
+        tests:
+          - not_null
+
+  - name: stg_intercambio_subsistema
+    description: "Prepara os dados horários de intercâmbio de energia entre subsistemas."
+    columns:
+      - name: instante_medicao
+        description: "Chave temporal da medição."
+        tests:
+          - not_null
+      - name: id_subsistema_origem
+        description: "Identificador do subsistema de origem."
+        tests:
+          - not_null
+      - name: id_subsistema_destino
+        description: "Identificador do subsistema de destino."
+        tests:
+          - not_null
+
+  - name: stg_cmo_semanal
+    description: "Prepara os dados semanais de Custo Marginal de Operação."
+    columns:
+      - name: data_semana
+        description: "Chave de data da semana operativa."
+        tests:
+          - not_null
+      - name: id_subsistema
+        description: "Chave do subsistema."
+        tests:
+          - not_null
+
+  - name: stg_ind_confiabilidade_ccal
+    description: "Prepara os dados do indicador de confiabilidade CCAL."
+    columns:
+      - name: data_referencia
+        description: "Chave de data do indicador."
+        tests:
+          - not_null
+      - name: periodicidade
+        description: "Periodicidade do dado (Anual ou Mensal)."
+        tests:
+          - accepted_values:
+              values: ['AN', 'ME']

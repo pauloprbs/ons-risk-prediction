@@ -1,0 +1,95 @@
+# projeto_etl/dbt_projeto/models/marts/marts.yml
+version: 2
+
+models:
+  # --- DIMENSIONS ---
+  - name: dim_localizacao
+    description: "Dimensão que agrega informações de localização (subsistema e estado)."
+    columns:
+      - name: id_localizacao
+        description: "Chave primária da dimensão de localização."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_tempo
+    description: "Dimensão que detalha informações temporais, com granularidade horária."
+    columns:
+      - name: id_tempo
+        description: "Chave primária da dimensão de tempo (timestamp horário)."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_usina
+    description: "Dimensão com os atributos das usinas geradoras de energia."
+    columns:
+      - name: id_usina
+        description: "Chave primária da dimensão de usinas."
+        tests:
+          - unique
+          - not_null
+
+  # --- FACTS ---
+  - name: fct_geracao_energia
+    description: "Tabela fato principal, consolidando métricas horárias de geração, capacidade, restrição e custos por usina e localização."
+    columns:
+      - name: id_tempo
+        description: "Chave estrangeira para a dimensão de tempo."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_tempo')
+              field: id_tempo
+      - name: id_localizacao
+        description: "Chave estrangeira para a dimensão de localização."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_localizacao')
+              field: id_localizacao
+      - name: id_usina
+        description: "Chave estrangeira para a dimensão de usina."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_usina')
+              field: id_usina
+
+  - name: fct_intercambio_energetico
+    description: "Tabela fato com granularidade horária para o intercâmbio de energia entre subsistemas."
+    columns:
+      - name: id_tempo
+        description: "Chave estrangeira para a dimensão de tempo."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_tempo')
+              field: id_tempo
+      - name: id_localizacao_origem
+        description: "Chave estrangeira para a localização de origem."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_localizacao')
+              field: id_localizacao
+      - name: id_localizacao_destino
+        description: "Chave estrangeira para a localização de destino."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_localizacao')
+              field: id_localizacao
+
+  - name: fct_confiabilidade_rede
+    description: "Tabela fato com granularidade mensal/anual para os indicadores de confiabilidade da rede."
+    columns:
+      - name: id_fato_confiabilidade
+        description: "Chave primária da tabela fato."
+        tests:
+          - unique
+          - not_null
+      - name: data_referencia
+        description: "Data de referência para o indicador."
+        tests:
+          - not_null
