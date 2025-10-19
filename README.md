@@ -199,7 +199,49 @@ Com a camada `RAW` populada, esta etapa executa o pipeline de transformação SQ
 
 2. Configuração (Primeira Execução):
 
-    - Assegure-se de que seu arquivo `.env` na raiz do projeto está com as credenciais corretas do Snowflake.
+    - Assegure-se de que seu arquivo `.env`, conforme o exemplo, na raiz do projeto está com as credenciais corretas do Snowflake.
+
+    ```env
+    # ==========================================================
+    # ARQUIVO .ENV EXEMPLO
+    # Este arquivo NÃO DEVE ser enviado para o Git.
+    # Preencha com suas credenciais pessoais.
+    # ==========================================================
+
+    # --- Airbyte ---
+    VERSION=latest
+    DATABASE_USER=docker
+    DATABASE_PASSWORD=docker
+    DATABASE_DB=airbyte
+    CONFIG_ROOT=/data
+    WORKSPACE_ROOT=/workspace
+    # ... (outras variáveis do Airbyte)
+
+    # --- Airflow ---
+    AIRFLOW_DB_USER=airflow
+    AIRFLOW_DB_PASSWORD=airflow
+    AIRFLOW_DB_NAME=airflow
+    AIRFLOW_USER=admin
+    AIRFLOW_PASSWORD=admin
+    AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+    AIRFLOW__WEBSERVER__SECRET_KEY=changeme
+
+    # --- Snowflake (dbt) ---
+    # Conta (da sua URL)
+    SNOWFLAKE_ACCOUNT=utkyvtt-ub67942
+
+    # Warehouse (que criamos no script 01_setup.sql)
+    SNOWFLAKE_WAREHOUSE=DBT_WH
+
+    # Banco de dados e Schema padrão (definidos no profiles.yml do dbt)
+    SNOWFLAKE_DATABASE=CORE_DB
+    SNOWFLAKE_SCHEMA=ML_FEATURES
+
+    # --- PREENCHA COM SUAS CREDENCIAIS ---
+    SNOWFLAKE_USER=SEU_USUARIO_DBT
+    SNOWFLAKE_PASSWORD=SUA_SENHA_DBT
+    SNOWFLAKE_ROLE=SUA_ROLE_DBT
+    ```
 
     - O arquivo `dbt_ons/profiles.yml` está configurado para ler essas variáveis.
 
