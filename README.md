@@ -333,9 +333,9 @@ Para esta etapa é preciso possuir um bucket S3 vazio criado (ex: `ons-risk-pred
 
 Precisamos de um IAM Role na AWS que o Snowflake possa "assumir" para ter permissão de escrever no S3.
 
-    1. **Acesse o IAM** no Console da AWS e vá para Roles (Funções).
+1. **Acesse o IAM** no Console da AWS e vá para Roles (Funções).
 
-    2. **Anexar Política de Permissões (Permissions Policy)**: Crie ou verifique uma política com as ações necessárias no seu bucket:
+2. **Anexar Política de Permissões (Permissions Policy)**: Crie ou verifique uma política com as ações necessárias no seu bucket:
 
     ```json
     {
@@ -358,7 +358,7 @@ Precisamos de um IAM Role na AWS que o Snowflake possa "assumir" para ter permis
     }
     ```
 
-    3. **Editar Política de Confiança (Trust Policy)**: Esta é a parte crucial. Edite a "Trust Relationship" do seu Role para permitir que a conta AWS do Snowflake (ex: arn:aws:iam::851725645124:root) assuma esta função, usando um ExternalId que obteremos do Snowflake.
+3. **Editar Política de Confiança (Trust Policy)**: Esta é a parte crucial. Edite a "Trust Relationship" do seu Role para permitir que a conta AWS do Snowflake (ex: arn:aws:iam::851725645124:root) assuma esta função, usando um ExternalId que obteremos do Snowflake.
 
     ```json
     {
