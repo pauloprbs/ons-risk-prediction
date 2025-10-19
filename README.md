@@ -269,7 +269,170 @@ docker-compose exec dbt dbt deps
     docker-compose exec dbt dbt show --select fct_modeling_table_final --limit 5
     ```
 
-    Ou consultando no Snowflake: `SELECT * FROM CORE_DB.ML_FEATURES.FCT_MODELING_TABLE_FINAL LIMIT 10;`
+    Ou consultando no Snowflake: `SELECT * FROM CORE_DB.ML_FEATURES.FCT_MODELING_TABLE_FINAL LIMIT 10;
+
+**Passo 7: Orquestração do Pipeline com Airflow**
+
+Com o pipeline de ELT do Snowflake (Load) e dbt (Transform) validado, o próximo passo é automatizar sua execução usando o Apache Airflow.
+
+1. Configuração do Ambiente Airflow:
+
+    - Para que o Airflow possa executar os comandos do dbt e os scripts de extração, precisamos que ele tenha as bibliotecas necessárias. O arquivo `docker-compose.yml` (localizado na raiz do projeto) foi ajustado para:
+
+        - Instalar `dbt-snowflake` dentro dos containers do Airflow (`airflow-init`, `airflow-webserver`, `airflow-scheduler`).
+
+        - Mapear (montar) as pastas do nosso projeto (`airflow_ons/`, `dbt_ons/` e `scripts/`) para dentro dos containers, para que o Airflow possa acessá-las.
+
+2. Refatoração dos Scripts de Extração (Que foram copiados para a pasta do Airflow):
+
+    - Os scripts `scripts/extract_carga_api.py` e `scripts/download_weather_data.py` foram refatorados. Suas lógicas principais foram movidas de `if __name__ == "__main__":` para funções nomeadas (ex: `extract_carga_main()` e `download_clima_main()`).
+
+    - Isso permite que o Airflow os importe e os execute como tarefas Python (`@task`), ao mesmo tempo em que ainda podem ser executados manualmente via terminal.
+
+3. Criação do DAG (Pipeline Orquestrado):
+
+    - O arquivo `airflow_ons/dags/ons_feature_pipeline_dag.py` define o nosso pipeline. Ele consiste em quatro tarefas principais:
+
+        - `extract_carga_api`: Tarefa Python (`@task`) que chama a função `extract_carga_main()`.
+
+        - `download_weather_data`: Tarefa Python (`@task`) que chama a função `download_clima_main()`.
+
+        - `dbt_run_transformations`: Tarefa `BashOperator` que executa `dbt run` após as extrações terminarem.
+
+        - `dbt_test_data_quality`: Tarefa `BashOperator` que executa `dbt test` após o `dbt run`.
+
+    - As dependências são definidas da seguinte forma: as duas tarefas de extração rodam em paralelo; somente após ambas terminarem com sucesso, a tarefa `dbt_run` é iniciada, seguida pelo `dbt_test`.
+
+4. Executando o Pipeline Orquestrado:
+
+    - Inicie (ou reinicie, se já estiverem rodando) todos os serviços do Docker com as novas configurações:
+
+    ```bash
+    # Na pasta raiz (ons-risk-prediction/), pare os containers antigos
+    docker-compose down
+
+    # Inicie os containers com as novas configurações (o --build é importante na primeira vez)
+    docker-compose up -d --build
+    ```
+
+    - Acesse a interface do Airflow em seu navegador: http://localhost:8080 (usuário/senha: admin/admin, conforme seu .env).
+
+    - Na lista de DAGs, encontre ons_feature_pipeline_dag.
+
+    - Ative o DAG clicando no botão de "toggle" (de "Off" para "On").
+
+    - Para rodar o pipeline imediatamente, clique no ícone "Play" (Trigger DAG) à direita.
+
+**Passo 8: Exportação de Dados para S3 (Para Modelagem)**
+
+Após o pipeline do Airflow garantir que a tabela `FCT_MODELING_TABLE_FINAL` está atualizada no Snowflake, o próximo passo é exportar esses dados para um local que o SageMaker possa consumir eficientemente. Usaremos um bucket S3.
+
+Para esta etapa é preciso possuir um bucket S3 vazio criado (ex: `ons-risk-prediction-data-674650987717`).
+
+**8.1 – Configurar o IAM Role na AWS**
+
+Precisamos de um IAM Role na AWS que o Snowflake possa "assumir" para ter permissão de escrever no S3.
+
+    1. **Acesse o IAM** no Console da AWS e vá para Roles (Funções).
+
+    2. **Anexar Política de Permissões (Permissions Policy)**: Crie ou verifique uma política com as ações necessárias no seu bucket:
+
+    ```json
+    {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Action": [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:ListBucket",
+            "s3:DeleteObject"
+        ],
+        "Resource": [
+            "arn:aws:s3:::ons-risk-prediction-data-674650987717",
+            "arn:aws:s3:::ons-risk-prediction-data-674650987717/*"
+        ]
+        }
+    ]
+    }
+    ```
+
+    3. **Editar Política de Confiança (Trust Policy)**: Esta é a parte crucial. Edite a "Trust Relationship" do seu Role para permitir que a conta AWS do Snowflake (ex: arn:aws:iam::851725645124:root) assuma esta função, usando um ExternalId que obteremos do Snowflake.
+
+    ```json
+    {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Principal": {
+            "AWS": "arn:aws:iam::851725645124:root"
+        },
+        "Action": "sts:AssumeRole",
+        "Condition": {
+            "StringEquals": {
+            "sts:ExternalId": "SEU_EXTERNAL_ID_GERADO_NO_PASSO_8_2"
+            }
+        }
+        }
+    ]
+    }
+    ```
+
+**8.2 – Criar a STORAGE INTEGRATION no Snowflake**
+
+Este objeto conecta o Snowflake ao IAM Role da AWS.
+
+    1. Primeiro, obtenha o `STORAGE_AWS_EXTERNAL_ID` executando `DESC INTEGRATION` (ou na criação inicial).
+
+    2. Execute no Snowflake (como `ACCOUNTADMIN`):
+
+    ```sql
+    8.2 – Criar a STORAGE INTEGRATION no Snowflake
+    Este objeto conecta o Snowflake ao IAM Role da AWS.
+
+    Primeiro, obtenha o STORAGE_AWS_EXTERNAL_ID executando DESC INTEGRATION (ou na criação inicial).
+
+    Execute no Snowflake (como ACCOUNTADMIN):
+    ```
+    Garanta que o `STORAGE_AWS_EXTERNAL_ID` aqui seja o mesmo usado no `sts:ExternalId` da Política de Confiança do IAM Role.
+
+**8.3 – Criar o STAGE no Snowflake**
+
+O Stage é um ponteiro para o S3, usando a integração que acabamos de criar.
+
+```sql
+USE DATABASE CORE_DB;
+USE SCHEMA ML_FEATURES;
+
+CREATE OR REPLACE STAGE my_s3_stage
+STORAGE_INTEGRATION = my_s3_integration -- Nome da integração
+URL = 's3://ons-risk-prediction-data-674650987717/'
+FILE_FORMAT = (TYPE = PARQUET COMPRESSION = SNAPPY);
+```
+
+**8.4 – Testar a Conexão do Stage (Opcional)**
+
+Execute no Snowflake: `LIST @my_s3_stage;`. Se retornar uma lista (mesmo que vazia) sem erros, a conexão está funcionando.
+
+8.5 – Exportar os Dados da Tabela para o S3
+Use o comando `COPY INTO` para descarregar (exportar) os dados da sua tabela dbt para o S3.
+
+```sql
+COPY INTO @my_s3_stage/export/ -- Salvará na 'pasta' /export do S3
+FROM CORE_DB.ML_FEATURES.FCT_MODELING_TABLE_FINAL
+FILE_FORMAT = (TYPE = PARQUET COMPRESSION = SNAPPY)
+MAX_FILE_SIZE = 50000000 -- Divide em arquivos de ~50MB
+HEADER = TRUE
+OVERWRITE = TRUE;
+```
+
+**8.6 – Verificar os Arquivos no S3**
+
+Vá até o console do S3, navegue até o bucket `ons-risk-prediction-data-674650987717` e verifique a pasta `export/`. Você deverá ver os arquivos Parquet gerados (ex: `data_0_0_0.parquet.snappy`).
+
+
 
 ---
 

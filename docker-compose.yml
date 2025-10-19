@@ -1,4 +1,3 @@
-
 services:
   # -------------------
   # Airflow Services
@@ -21,8 +20,11 @@ services:
       retries: 5
 
   airflow-init:
-    image: apache/airflow:2.7.0
+    # A imagem será construída a partir do Dockerfile no diretório atual
+    build: .
     container_name: airflow-init
+    env_file:
+      - ./.env
     user: "0:0"
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -43,16 +45,18 @@ services:
       - |
         mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
         chown -R 50000:0 /opt/airflow
-        # Instala as dependências do dbt dentro do container do Airflow
-        pip install dbt-snowflake
+        # A instalação do dbt foi movida para o Dockerfile
         exec /entrypoint airflow version
     depends_on:
       airflow-db:
         condition: service_healthy
 
   airflow-webserver:
-    image: apache/airflow:2.7.0
+    # A imagem será construída a partir do Dockerfile no diretório atual
+    build: .
     container_name: airflow-webserver
+    env_file:
+      - ./.env
     user: "50000:0"
     command: webserver
     ports:
@@ -78,8 +82,11 @@ services:
       retries: 5
 
   airflow-scheduler:
-    image: apache/airflow:2.7.0
+    # A imagem será construída a partir do Dockerfile no diretório atual
+    build: .
     container_name: airflow-scheduler
+    env_file:
+      - ./.env
     user: "50000:0"
     command: scheduler
     environment:
@@ -104,8 +111,6 @@ services:
   # ----------------------------------------------------
   # dbt (Snowflake) - Serviço para Desenvolvimento Local
   # ----------------------------------------------------
-  # Este serviço é para você executar comandos dbt manualmente no seu terminal, se precisar.
-  # A orquestração automática será feita pelo Airflow.
   dbt:
     image: ghcr.io/dbt-labs/dbt-snowflake:latest
     container_name: dbt_ons_service
@@ -115,7 +120,6 @@ services:
       - ./dbt_ons:/usr/app
       - ~/.dbt/profiles.yml:/root/.dbt/profiles.yml
     working_dir: /usr/app
-    # Removemos as variáveis de ambiente do Snowflake, pois o dbt usará o profiles.yml
     entrypoint: ["/bin/sh", "-c", "echo 'dbt container ready. Run commands like: docker-compose exec dbt_ons_service dbt run' && while true; do sleep 30; done"]
 
 volumes:
