@@ -185,6 +185,50 @@ Execute o script ```snowflake_scripts_ons/03_load_raw_data.sql```.
     - Usa ```PURGE = FALSE``` para que os arquivos no stage não sejam apagados após a carga, permitindo re-execuções para desenvolvimento.
     - Finaliza com uma consulta ```UNION ALL``` que mostra a contagem de linhas em todas as 12 tabelas, validando que a ingestão foi bem-sucedida.
 
+**Passo 6: Transformação de Dados (dbt)**
+
+Com a camada `RAW` populada, esta etapa executa o pipeline de transformação SQL que replica a lógica dos notebooks Jupyter.
+
+1. Estrutura do dbt: O projeto `dbt_ons/` está organizado em três camadas:
+
+    - `models/staging/`: Contém 12 modelos (1 para cada fonte) que limpam, renomeiam e corrigem os tipos de dados da camada RAW.
+
+    - `models/intermediate/`: Contém 9 modelos que agregam os dados por dia (ex: `int_deficit_diario.sql`, `int_geracao_diaria.sql`), preparando-os para a junção final.
+
+    - `models/core/`: Contém o modelo `fct_modeling_table_final.sql`, que une todas as fontes intermediárias e aplica as features de janela deslizante (ex: carga_media_7d, ear_ontem).
+
+2. Configuração (Primeira Execução):
+
+    - Assegure-se de que seu arquivo `.env` na raiz do projeto está com as credenciais corretas do Snowflake.
+
+    - O arquivo `dbt_ons/profiles.yml` está configurado para ler essas variáveis.
+
+    - Instale os pacotes de dependência (como o `dbt_utils`):
+
+```bash
+docker-compose exec dbt dbt deps
+```
+
+3. Executar o Pipeline dbt:
+
+    - A partir da pasta raiz do projeto (`ons-risk-prediction/`), execute o pipeline completo:
+
+    ```bash
+    docker-compose exec dbt dbt run
+    ```
+
+    - O que faz: O dbt irá compilar e executar todos os 22 modelos (`.sql`) em ordem. Ele criará as views de `staging` e `intermediate` no banco `STAGING_DB` e a tabela final `FCT_MODELING_TABLE_FINAL` no banco `CORE_DB`.
+
+4. Verificar o Resultado:
+
+    - Você pode verificar a tabela final diretamente do terminal:
+
+    ```bash
+    docker-compose exec dbt dbt show --select fct_modeling_table_final --limit 5
+    ```
+
+    Ou consultando no Snowflake: `SELECT * FROM CORE_DB.ML_FEATURES.FCT_MODELING_TABLE_FINAL LIMIT 10;`
+
 ---
 
 ## 📊 Estrutura e Descobertas do Projeto
