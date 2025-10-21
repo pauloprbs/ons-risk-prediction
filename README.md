@@ -99,6 +99,12 @@ Execute os notebooks Jupyter em sequência, do 01 ao final. Cada notebook realiz
 ```11-Modelagem-Unbalanced-Learning.ipynb```
 ```12-Ensemble.ipynb```
 
+5. **Resultados**
+
+Os resultados da modelagem local são apresentados abaixo.
+
+![Resultados Ensemble](images/results-local.png)
+
 ---
 
 ## ☁️ Abordagem 2: Pipeline de Produção em Nuvem (Snowflake + dbt + Airflow)
@@ -432,7 +438,50 @@ OVERWRITE = TRUE;
 
 Vá até o console do S3, navegue até o bucket `ons-risk-prediction-data-674650987717` e verifique a pasta `export/`. Você deverá ver os arquivos Parquet gerados (ex: `data_0_0_0.parquet.snappy`).
 
+**Passo 9: Modelagem Híbrida em Nuvem (AWS SageMaker)**
 
+Com os dados de modelagem disponíveis no S3 (na pasta `export/`), esta etapa utiliza a AWS SageMaker para treinar modelos individualmente e avaliar um ensemble.
+
+**9.1 – Configuração do Ambiente SageMaker**
+
+* Foi utilizada uma instância de notebook SageMaker (ex: `ml.t3.medium`) com um kernel apropriado (ex: `conda_tensorflow2_p310`).
+* As permissões (IAM Role) foram configuradas para acesso ao S3 e execução de Training Jobs.
+
+**9.2 – Treinamento Individual dos Modelos na AWS**
+
+* Foram criados três notebooks SageMaker para lançar os jobs de treinamento, cada um usando os dados Parquet do S3 (`s3://ons-risk-prediction-data-674650987717/export/`) como entrada:
+    * `BRF.ipynb`:
+        * Define o script `source_brf_fixed/train_balanced_rf.py`.
+        * Configura um `sagemaker.sklearn.SKLearn` Estimator.
+        * Executa `.fit()`. O `model.tar.gz` (contendo `brf-model.joblib`, `scaler_brf.joblib`, `feature_names.joblib`, `target_mapping.joblib`) é salvo no S3.
+    * `XGBoost.ipynb`:
+        * Define o script `source_xgb/train_xgboost.py` (corrigido para `objective='multi:softprob'` e salvar `feature_names_xgb.joblib`).
+        * Configura um `sagemaker.xgboost.XGBoost` Estimator (com `objective='multi:softprob'`).
+        * Executa `.fit()`. O `model.tar.gz` (contendo `xgboost-model.json`, `scaler_xgb.joblib`, `feature_names_xgb.joblib`, `risk_thresholds.joblib`) é salvo no S3.
+    * `LSTM.ipynb`:
+        * Define o script `source_lstm/train_lstm.py` (corrigido para salvar `feature_names_lstm.joblib`).
+        * Configura um `sagemaker.tensorflow.TensorFlow` Estimator.
+        * Executa `.fit()`. O `model.tar.gz` (contendo `lstm_model_... .h5`, `scaler_lstm_... .joblib`, `feature_names_lstm.joblib`, etc.) é salvo no S3.
+
+**9.3 – Avaliação do Ensemble no Notebook SageMaker**
+
+* O notebook final `12-Ensemble-AWS.ipynb` executa a avaliação:
+    * **Instalação (Célula 1):** Garante as versões corretas das bibliotecas (`scikit-learn==1.2.2`, etc.).
+    * **Configuração (Célula 2):** Define as URIs S3 dos três `model.tar.gz` finais e o caminho dos dados (`s3://.../export/`).
+    * **Download (Célula 3):** Baixa e extrai os artefatos dos modelos para a instância do notebook.
+    * **Carregamento (Célula 4):** Carrega modelos, scalers, listas de features, mapeamento de target e thresholds.
+    * **Processamento e Predição (Célula 5):**
+        * Carrega os dados completos (`pd.read_parquet`).
+        * Aplica a divisão temporal (últimos 20%) para criar `df_teste`.
+        * Discretiza `y_test` usando os `risk_thresholds` carregados.
+        * Para cada modelo: seleciona as features corretas (`feature_names_*`), preenche NaNs, aplica o scaler correto, cria sequências (para LSTM) e faz a predição.
+        * Alinha as predições e o `y_test` discretizado.
+        * Calcula a média das probabilidades para o ensemble.
+        * Gera `classification_report` e `confusion_matrix`.
+
+**9.4 – Resultados Obtidos**
+
+* O notebook `12-Ensemble-AWS.ipynb` (com saídas salvas) apresenta as métricas finais e a matriz de confusão do modelo ensemble, representando a performance da Abordagem 2 nos dados mais recentes preparados pelo pipeline dbt.
 
 ---
 
