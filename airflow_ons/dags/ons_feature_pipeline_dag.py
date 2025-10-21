@@ -4,10 +4,10 @@ import sys
 import os
 from datetime import datetime
 from airflow.decorators import dag, task
-from airflow.operators.bash import BashOperator  # <--- Re-importe o BashOperator
+from airflow.operators.bash import BashOperator
 
 # -----------------------------------------------------------------
-# 1. PREPARAÇÃO: (Seu código original, está correto)
+# 1. PREPARAÇÃO
 # -----------------------------------------------------------------
 PROJECT_ROOT_PATH = '/opt/airflow/../' 
 SCRIPT_PATH = os.path.join(PROJECT_ROOT_PATH, 'scripts')
@@ -22,7 +22,7 @@ except ImportError as e:
     def download_clima_main(): pass
 
 # -----------------------------------------------------------------
-# 2. CONFIGURAÇÃO DO DBT (Seu código original, está correto)
+# 2. CONFIGURAÇÃO DO DBT
 # -----------------------------------------------------------------
 DBT_PROJECT_DIR = '/opt/airflow/dbt_ons'
 DBT_PROFILES_DIR = '/opt/airflow/dbt_ons' 
@@ -42,7 +42,7 @@ def ons_feature_pipeline():
     """
 
     # -----------------------------------------------------------------
-    # 3. TAREFAS DE EXTRAÇÃO (Extract) - (Seu código original)
+    # 3. TAREFAS DE EXTRAÇÃO (Extract)
     # -----------------------------------------------------------------
     
     @task(task_id='extract_carga_api')
@@ -58,7 +58,7 @@ def ons_feature_pipeline():
         print("Download de Clima concluído.")
 
     # -----------------------------------------------------------------
-    # 4. TAREFAS DE TRANSFORMAÇÃO (Transform) - <<< CORREÇÃO AQUI
+    # 4. TAREFAS DE TRANSFORMAÇÃO (Transform)
     # -----------------------------------------------------------------
     
     # Volte a usar o BashOperator. 
@@ -75,7 +75,7 @@ def ons_feature_pipeline():
     )
 
     # -----------------------------------------------------------------
-    # 5. DEFINIÇÃO DE DEPENDÊNCIAS - <<< CORREÇÃO AQUI
+    # 5. DEFINIÇÃO DE DEPENDÊNCIAS
     # -----------------------------------------------------------------
     
     # Use as variáveis das tasks do BashOperator

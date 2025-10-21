@@ -6,4 +6,4 @@ SELECT
     nom_subsistema AS subsistema,
     TRY_CAST(REPLACE(ena_bruta_regiao_percentualmlt, ',', '.') AS FLOAT) AS ena_percentual_mlt_seco
 FROM {{ source('ons_data_raw', 'ENA_DIARIO_RAW') }}
-WHERE nom_subsistema = 'SUDESTE'  -- Corrigido: era 'subsistema'
+WHERE nom_subsistema = 'SUDESTE'

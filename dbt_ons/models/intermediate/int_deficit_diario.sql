@@ -27,7 +27,6 @@ daily_deficit as (
 
 -- Final Select: Junta a espinha dorsal de datas (all_days) com os déficits
 select
-    -- CORREÇÃO: Usar 'ad.date_day' em vez de 'ad.dia'
     ad.date_day as timestamp, 
     coalesce(dd.deficit_diario_mwh, 0) as deficit_diario_mwh,
     

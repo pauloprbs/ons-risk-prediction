@@ -24,11 +24,11 @@ saidas_diarias as (
 )
 
 select
-    d.date_day as timestamp, -- <-- CORRIGIDO AQUI
+    d.date_day as timestamp,
     coalesce(e.total_entradas_mwh, 0) as entradas_seco_mwh,
     coalesce(s.total_saidas_mwh, 0) as saidas_seco_mwh,
     (coalesce(e.total_entradas_mwh, 0) - coalesce(s.total_saidas_mwh, 0)) as saldo_intercambio_seco
     
 from {{ ref('int_all_days') }} d
-left join entradas_diarias e on d.date_day = e.dia -- <-- CORRIGIDO AQUI
-left join saidas_diarias s on d.date_day = s.dia -- <-- CORRIGIDO AQUI
+left join entradas_diarias e on d.date_day = e.dia
+left join saidas_diarias s on d.date_day = s.dia
